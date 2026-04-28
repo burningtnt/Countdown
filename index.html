@@ -287,9 +287,11 @@
             const container = document.querySelector('.container');
             if (!container) return;
 
+            container.style.transform = 'none';
+
             // 获取视口尺寸（减去 padding）
-            const viewportWidth = window.innerWidth - 40;
-            const viewportHeight = window.innerHeight - 40;
+            const viewportWidth = window.innerWidth - 20;
+            const viewportHeight = window.innerHeight - 20;
             
             // 获取容器的实际渲染尺寸
             const containerRect = container.getBoundingClientRect();
