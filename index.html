@@ -11,9 +11,13 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -44,6 +48,7 @@
             max-width: 600px;
             width: 100%;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            transform-origin: center center;
         }
 
         body.light-theme .container {
@@ -249,7 +254,7 @@
             } else if (theme === 'force_dark') {
                 isDark = true;
             } else {
-                // auto ���其他值默认使用系统设置
+                // auto 或其他值默认使用系统设置
                 isDark = isSystemDarkMode();
             }
 
@@ -269,6 +274,34 @@
             return String(num).padStart(2, '0');
         }
 
+        // 计算并应用缩放
+        function applyScale() {
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // 获取容器的自然宽高
+            const containerWidth = 600 + 40; // max-width + padding
+            const containerHeight = container.offsetHeight;
+
+            // 计算需要的缩放比例
+            const scaleX = viewportWidth / containerWidth;
+            const scaleY = viewportHeight / containerHeight;
+            
+            // 取较小的比例，确保内容完全显示
+            const scale = Math.min(scaleX, scaleY, 1); // 最多不放大，只缩小
+
+            if (scale < 1) {
+                // 需要缩放
+                container.style.transform = `scale(${scale})`;
+            } else {
+                // 不需要缩放
+                container.style.transform = 'scale(1)';
+            }
+        }
+
         // 更新倒计时
         function updateCountdown() {
             const deadline = getDeadlineFromURL();
@@ -281,6 +314,8 @@
                         <div>${t('missingDeadline')}</div>
                     </div>
                 `;
+                // 更新完内容后重新计算缩放
+                setTimeout(applyScale, 0);
                 return;
             }
 
@@ -294,6 +329,7 @@
                         ${t('completed')}
                     </div>
                 `;
+                setTimeout(applyScale, 0);
                 return;
             }
 
@@ -324,6 +360,9 @@
                     </div>
                 </div>
             `;
+            
+            // 更新完内容后重新计算缩放
+            setTimeout(applyScale, 0);
         }
 
         // 监听系统主题变化
@@ -335,6 +374,9 @@
                 }
             });
         }
+
+        // 监听窗口大小变化，重新计算缩放
+        window.addEventListener('resize', applyScale);
 
         // 初始化
         applyTheme();
