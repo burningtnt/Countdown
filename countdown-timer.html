@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒计时</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Light 主题 */
+        body.light-theme {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        /* Dark 主题 */
+        body.dark-theme {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        body.light-theme .container {
+            background-color: #f5f5f5;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-theme .container {
+            background-color: #1a1a1a;
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
+        }
+
+        .countdown-display {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .time-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-value {
+            font-size: 48px;
+            font-weight: bold;
+            min-width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.light-theme .time-value {
+            background-color: #e8e8e8;
+            color: #000000;
+        }
+
+        body.dark-theme .time-value {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+        .time-label {
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        body.light-theme .time-label {
+            color: #666666;
+        }
+
+        body.dark-theme .time-label {
+            color: #999999;
+        }
+
+        .error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            font-size: 16px;
+            text-align: center;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        body.light-theme .error {
+            color: #d32f2f;
+        }
+
+        body.dark-theme .error {
+            color: #ff6b6b;
+        }
+
+        .error-icon {
+            font-size: 48px;
+        }
+
+        .completed {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        body.light-theme .completed {
+            color: #2e7d32;
+        }
+
+        body.dark-theme .completed {
+            color: #66bb6a;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+                gap: 20px;
+            }
+
+            .time-value {
+                font-size: 36px;
+                min-width: 80px;
+                height: 80px;
+            }
+
+            .countdown-display {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="content"></div>
+    </div>
+
+    <script>
+        // 多语言配置
+        const i18n = {
+            en_US: {
+                days: 'Days',
+                hours: 'Hours',
+                minutes: 'Minutes',
+                seconds: 'Seconds',
+                missingDeadline: 'Missing deadline parameter',
+                completed: '✓ Deadline reached'
+            },
+            zh_CN: {
+                days: '天',
+                hours: '小时',
+                minutes: '分钟',
+                seconds: '秒',
+                missingDeadline: '缺少 deadline 参数',
+                completed: '✓ 已截止'
+            }
+        };
+
+        // 获取语言设置
+        function getLanguageFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('language') || 'auto';
+        }
+
+        // 自动识别浏览器语言
+        function getAutoLanguage() {
+            const browserLang = navigator.language || navigator.userLanguage;
+            // 匹配 en 或 zh 开头的语言
+            if (browserLang.startsWith('en')) {
+                return 'en_US';
+            } else if (browserLang.startsWith('zh')) {
+                return 'zh_CN';
+            }
+            // 默认英文
+            return 'en_US';
+        }
+
+        // 获取当前语言
+        function getCurrentLanguage() {
+            const language = getLanguageFromURL();
+            
+            if (language === 'auto' || !language) {
+                return getAutoLanguage();
+            }
+            
+            // 验证语言是否存在，不存在则使用英文
+            return i18n[language] ? language : 'en_US';
+        }
+
+        // 获取翻译文本
+        function t(key) {
+            const lang = getCurrentLanguage();
+            return i18n[lang][key] || i18n['en_US'][key];
+        }
+
+        // 获取主题设置
+        function getThemeFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('theme') || 'auto';
+        }
+
+        // 检查系统是否为暗色模式
+        function isSystemDarkMode() {
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+
+        // 应用主题
+        function applyTheme() {
+            const theme = getThemeFromURL();
+            const body = document.body;
+
+            let isDark = false;
+
+            if (theme === 'force_light') {
+                isDark = false;
+            } else if (theme === 'force_dark') {
+                isDark = true;
+            } else {
+                // auto ���其他值默认使用系统设置
+                isDark = isSystemDarkMode();
+            }
+
+            body.classList.remove('light-theme', 'dark-theme');
+            body.classList.add(isDark ? 'dark-theme' : 'light-theme');
+        }
+
+        // 从 URL 查询参数获取 deadline 时间戳
+        function getDeadlineFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const deadline = urlParams.get('deadline');
+            return deadline ? parseInt(deadline, 10) : null;
+        }
+
+        // 格式化时间单位
+        function padZero(num) {
+            return String(num).padStart(2, '0');
+        }
+
+        // 更新倒计时
+        function updateCountdown() {
+            const deadline = getDeadlineFromURL();
+            const contentDiv = document.getElementById('content');
+
+            if (!deadline) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">⚠️</div>
+                        <div>${t('missingDeadline')}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const now = Date.now();
+            const deadlineMs = deadline * 1000; // 将秒转换为毫秒
+            const remaining = deadlineMs - now;
+
+            if (remaining <= 0) {
+                contentDiv.innerHTML = `
+                    <div class="completed">
+                        ${t('completed')}
+                    </div>
+                `;
+                return;
+            }
+
+            // 计算时间差
+            const totalSeconds = Math.floor(remaining / 1000);
+            const days = Math.floor(totalSeconds / (24 * 3600));
+            const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            contentDiv.innerHTML = `
+                <div class="countdown-display">
+                    <div class="time-unit">
+                        <div class="time-value">${padZero(days)}</div>
+                        <div class="time-label">${t('days')}</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value">${padZero(hours)}</div>
+                        <div class="time-label">${t('hours')}</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value">${padZero(minutes)}</div>
+                        <div class="time-label">${t('minutes')}</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value">${padZero(seconds)}</div>
+                        <div class="time-label">${t('seconds')}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 监听系统主题变化
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                const theme = getThemeFromURL();
+                if (theme === 'auto' || !theme) {
+                    applyTheme();
+                }
+            });
+        }
+
+        // 初始化
+        applyTheme();
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>
